@@ -1,16 +1,16 @@
-use std::env;
+pub mod cpu;
+pub mod mmu;
 
-#[allow(dead_code)]
-mod cpu;
-#[allow(dead_code)]
-mod mmu;
-#[allow(dead_code)]
+#[cfg(feature = "sdl")]
 mod frontend;
 
-use mmu::MMU;
-use cpu::CPU;
-
+#[cfg(feature = "sdl")]
 fn main() {
+    use std::env;
+
+    use cpu::CPU;
+    use mmu::MMU;
+
     let mut mmu: MMU = Default::default();
 
     // get the rom path from the first argument
@@ -24,3 +24,6 @@ fn main() {
     let mut cpu: CPU = CPU::new(&mut mmu);
     frontend::SDL::new(&mut cpu).run();
 }
+
+#[cfg(feature = "default")]
+fn main(){}

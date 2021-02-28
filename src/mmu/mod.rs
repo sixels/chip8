@@ -26,11 +26,11 @@ const CH8_FONT: [u8; 0x50] = [
 ];
 
 pub struct MMU {
-    rom: [u8; ROM_SIZE],
-    upper_rom: [u8; UPPER_ROM_SIZE],
+    pub rom: [u8; ROM_SIZE],
+    pub upper_rom: [u8; UPPER_ROM_SIZE],
     ram: [u8; RAM_SIZE],
 
-    pub(crate) vram: Box<[u8; VRAM_SIZE]>,
+    pub vram: Box<[u8; VRAM_SIZE]>,
 
     locked_rom: bool,
 }

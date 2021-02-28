@@ -15,26 +15,26 @@ pub enum Status {
 
 pub struct CPU {
     // general purpose registers (usually called Vx)
-    v: [u8; 16],
+    pub v: [u8; 16],
 
     // Program Counter and Stack Pointer
-    pc: u16,
-    sp: u16,
+    pub pc: u16,
+    pub sp: u16,
 
     // generally used to store memory addresses
-    i: u16,
+    pub i: u16,
 
     // Delay and Sound Timers
-    delay: u8,
-    sound: u8,
+    pub delay: u8,
+    pub sound: u8,
 
-    stack: [u16; 16],
+    pub stack: [u16; 16],
 
     // Memory Bus
-    pub(crate) bus: RefCell<MMU>,
+    pub bus: RefCell<MMU>,
 
     // cpu status
-    status: Status,
+    pub status: Status,
 }
 
 impl CPU {

@@ -21,7 +21,7 @@ fn main() {
         panic!("You should pass the rom path as argument")
     }
 
-    let mut cpu: CPU = CPU::new(&mut mmu);
+    let mut cpu: CPU = CPU::new(mmu);
     frontend::SDL::new(&mut cpu).run();
 }
 

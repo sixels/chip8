@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::mmu::MMU;
 
 #[allow(dead_code)]
@@ -11,7 +13,7 @@ pub enum Status {
     Halt,
 }
 
-pub struct CPU<'b> {
+pub struct CPU {
     // general purpose registers (usually called Vx)
     v: [u8; 16],
 
@@ -29,15 +31,15 @@ pub struct CPU<'b> {
     stack: [u16; 16],
 
     // Memory Bus
-    pub(crate) bus: &'b mut MMU,
+    pub(crate) bus: RefCell<MMU>,
 
     // cpu status
     status: Status,
 }
 
-impl<'b> CPU<'b> {
+impl CPU {
     // create a new cpu
-    pub fn new(bus: &'b mut MMU) -> Self {
+    pub fn new(bus: MMU) -> Self {
         // rom should already be locked
         assert!(bus.locked_rom());
 
@@ -54,7 +56,7 @@ impl<'b> CPU<'b> {
 
             stack: [0; 16],
 
-            bus,
+            bus: RefCell::new(bus),
             status: Status::Running,
         }
     }
@@ -72,7 +74,7 @@ impl<'b> CPU<'b> {
 
     // fetch and decode an opcode, returning the respective instruction
     pub fn fetch(&mut self) -> Instruction {
-        let opcode = self.bus.rw(self.pc as usize);
+        let opcode = self.bus.borrow_mut().rw(self.pc as usize);
         println!("{:04X}", opcode);
         let instruction: Instruction = opcode.into();
 

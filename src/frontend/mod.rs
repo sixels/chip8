@@ -16,22 +16,22 @@ const SCREEN_SCALE: usize = 5;
 const WINDOW_WIDTH: usize = 720;
 const WINDOW_HEIGHT: usize = 400;
 
-const BG_COLOR: Color = Color::RGB(0x00, 0x00, 0x00);
+const BG_COLOR: Color = Color::RGB(0x0F, 0x17, 0x13);
 const FG_COLOR: Color = Color::RGB(0x00, 0xFA, 0x00);
 
-pub struct SDL<'c, 'm> {
+pub struct SDL<'c> {
     context: sdl2::Sdl,
     canvas: Canvas<Window>,
-    cpu: &'c mut CPU<'m>,
+    cpu: &'c mut CPU,
 }
 
-impl<'c, 'm> SDL<'c, 'm> {
-    pub fn new(cpu: &'c mut CPU<'m>) -> Self {
+impl<'c> SDL<'c> {
+    pub fn new(cpu: &'c mut CPU) -> Self {
         let context = sdl2::init().expect("Could not initialize the sdl2 context");
 
         let video = context.video().expect("Could not load the video backend");
         let window = video
-            .window(WINDOW_TITLE, (720) as u32, (400) as u32)
+            .window(WINDOW_TITLE, (WINDOW_WIDTH) as u32, (WINDOW_HEIGHT) as u32)
             .position_centered()
             .vulkan()
             .borderless()
@@ -103,7 +103,7 @@ impl<'c, 'm> SDL<'c, 'm> {
             let x = i % 64;
             let y = i / 64;
 
-            if self.cpu.bus.vram[i] == 1 {
+            if self.cpu.bus.borrow().vram[i] == 1 {
                 self.canvas
                     .draw_point(Point::new(x as i32, y as i32))
                     .unwrap()

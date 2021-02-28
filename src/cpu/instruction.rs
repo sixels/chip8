@@ -162,10 +162,10 @@ impl From<u16> for Instruction {
 // TODO: debug support for instructions
 // impl Display for Instruction {  }
 
-impl<'a> super::CPU<'a> {
+impl super::CPU {
     /// CLS: clear the screen
     pub fn exec_cls(&mut self) {
-        for b in self.bus.vram.iter_mut() {
+        for b in self.bus.borrow_mut().vram.iter_mut() {
             *b = 0;
         }
     }
@@ -210,20 +210,20 @@ impl<'a> super::CPU<'a> {
                 let i = usize::from(self.i);
                 let value = self.v[x];
 
-                self.bus.wb(i, value / 100);
-                self.bus.wb(i + 1, value / 10 % 10);
-                self.bus.wb(i + 2, value % 100 % 10);
+                self.bus.borrow_mut().wb(i, value / 100);
+                self.bus.borrow_mut().wb(i + 1, value / 10 % 10);
+                self.bus.borrow_mut().wb(i + 2, value % 100 % 10);
             }
             AddressingMode::MemVx(x) => {
                 for i in 0..=x {
                     let offset = usize::from(self.i) + i;
-                    self.bus.wb(offset, self.v[i]);
+                    self.bus.borrow_mut().wb(offset, self.v[i]);
                 }
             }
             AddressingMode::VxMem(x) => {
                 for i in 0..=x {
                     let offset = usize::from(self.i) + i;
-                    self.v[i] = self.bus.rb(offset);
+                    self.v[i] = self.bus.borrow_mut().rb(offset);
                 }
             }
             _ => (),
@@ -238,11 +238,11 @@ impl<'a> super::CPU<'a> {
             self.v[0xF] = 0;
 
             for row in 0..usize::from(n) {
-                let sprite_data = self.bus.rb(usize::from(self.i) + row);
+                let sprite_data = self.bus.borrow_mut().rb(usize::from(self.i) + row);
 
                 for bit in 0..8 {
                     if (sprite_data & (0x80 >> bit)) > 0 {
-                        if self.bus.wb_vram(x + bit, y + row, 1) {
+                        if self.bus.borrow_mut().wb_vram(x + bit, y + row, 1) {
                             self.v[0xF] = 1;
                         }
                     }

@@ -4,7 +4,7 @@ use std::{fs, io};
 const ROM_SIZE: usize = 0x200;
 const UPPER_ROM_SIZE: usize = 0x400;
 const RAM_SIZE: usize = 0xA00;
-const VRAM_SIZE: usize = 64*32;
+const VRAM_SIZE: usize = 64 * 32;
 
 const CH8_FONT: [u8; 0x50] = [
     0x60, 0x90, 0x90, 0x90, 0x60, // 0
@@ -68,14 +68,9 @@ impl MMU {
         match offset {
             0x200..=0x5FF if !self.locked_rom => self.upper_rom[offset - 0x200] = byte,
             0x600..=0xFFF => self.ram[offset - 0x600] = byte,
-            _ => {
-                eprintln!("Writing an Read-Only offset: 0x{:04x}", offset);
-                match offset {
-                    0x200..=0x5FF => self.upper_rom[offset - 0x200] = byte,
-                    0x000..=0x1FF => self.rom[offset] = byte,
-                    _ => panic!("Invalid offset")
-                }
-            }
+            0x200..=0x5FF => self.upper_rom[offset - 0x200] = byte,
+            0x000..=0x1FF => self.rom[offset] = byte,
+            _ => panic!("Invalid offset"),
         }
     }
 
@@ -95,9 +90,6 @@ impl MMU {
 
         let old_value = self.vram[offset];
         self.vram[offset] ^= byte;
-
-        // dumping VRAM
-        // println!("{:02x?}", &self.vram);
 
         byte == old_value
     }

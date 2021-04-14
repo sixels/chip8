@@ -1,3 +1,5 @@
+use super::Status;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Opcode {
     CLS,
@@ -76,10 +78,7 @@ impl From<u16> for Instruction {
                 Opcode::SNE,
                 AddressingMode::VxImediate(x, (opcode & 0xFF) as u8),
             ),
-            (0x5, x, y, 0) => Instruction(
-                Opcode::SE,
-                AddressingMode::VxVy(x, y),
-            ),
+            (0x5, x, y, 0) => Instruction(Opcode::SE, AddressingMode::VxVy(x, y)),
             (0x6, x, _, _) => Instruction(
                 Opcode::LD,
                 AddressingMode::VxImediate(x, (opcode & 0xFF) as u8),
@@ -89,47 +88,17 @@ impl From<u16> for Instruction {
                 AddressingMode::VxImediate(x, (opcode & 0xFF) as u8),
             ),
 
-            (0x8, x, y, 0x0) => Instruction(
-                Opcode::LD,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x1) => Instruction(
-                Opcode::OR,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x2) => Instruction(
-                Opcode::AND,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x3) => Instruction(
-                Opcode::XOR,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x4) => Instruction(
-                Opcode::ADD,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x5) => Instruction(
-                Opcode::SUB,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x6) => Instruction(
-                Opcode::SHR,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0x7) => Instruction(
-                Opcode::SUBN,
-                AddressingMode::VxVy(x, y),
-            ),
-            (0x8, x, y, 0xE) => Instruction(
-                Opcode::SHL,
-                AddressingMode::VxVy(x, y),
-            ),
+            (0x8, x, y, 0x0) => Instruction(Opcode::LD, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x1) => Instruction(Opcode::OR, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x2) => Instruction(Opcode::AND, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x3) => Instruction(Opcode::XOR, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x4) => Instruction(Opcode::ADD, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x5) => Instruction(Opcode::SUB, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x6) => Instruction(Opcode::SHR, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0x7) => Instruction(Opcode::SUBN, AddressingMode::VxVy(x, y)),
+            (0x8, x, y, 0xE) => Instruction(Opcode::SHL, AddressingMode::VxVy(x, y)),
 
-            (0x9, x, y, 0) => Instruction(
-                Opcode::SNE,
-                AddressingMode::VxVy(x, y),
-            ),
+            (0x9, x, y, 0) => Instruction(Opcode::SNE, AddressingMode::VxVy(x, y)),
             (0xA, _, _, _) => Instruction(Opcode::LD, AddressingMode::IAddr(opcode & 0xFFF)),
             (0xB, _, _, _) => Instruction(Opcode::JP, AddressingMode::V0Addr(opcode & 0xFFF)),
             (0xC, x, _, _) => Instruction(
@@ -179,11 +148,11 @@ impl super::CPU {
             AddressingMode::V0Addr(addr) => {
                 self.pc = u16::from(self.v[0]) + addr;
             }
-            _ => (),
+            _ => unreachable!(),
         }
     }
 
-    /// LD: Load the content of a register/memory location into another 
+    /// LD: Load the content of a register/memory location into another
     pub fn exec_ld(&mut self, addressing_mode: AddressingMode) {
         match addressing_mode {
             AddressingMode::VxImediate(x, kk) => {
@@ -198,35 +167,37 @@ impl super::CPU {
             AddressingMode::VxDT(x) => {
                 self.v[x] = self.delay;
             }
-            // AddressingMode::VxKey(x) => {}
+            AddressingMode::VxKey(x) => self.status = Status::WaitingKeypress(x),
             AddressingMode::DTVx(x) => {
                 self.delay = self.v[x];
             }
             AddressingMode::STVx(x) => {
                 self.sound = self.v[x];
             }
-            // AddressingMode::FVx(x) => {}
+            AddressingMode::FVx(x) => {
+                self.i = u16::from(self.v[x]) * 5;
+            }
             AddressingMode::BVx(x) => {
                 let i = usize::from(self.i);
                 let value = self.v[x];
 
                 self.bus.borrow_mut().wb(i, value / 100);
-                self.bus.borrow_mut().wb(i + 1, value / 10 % 10);
-                self.bus.borrow_mut().wb(i + 2, value % 100 % 10);
+                self.bus.borrow_mut().wb(i + 1, (value % 100) / 10);
+                self.bus.borrow_mut().wb(i + 2, value % 10);
             }
             AddressingMode::MemVx(x) => {
-                for i in 0..=x {
-                    let offset = usize::from(self.i) + i;
-                    self.bus.borrow_mut().wb(offset, self.v[i]);
+                for rx in 0..=x {
+                    let offset = usize::from(self.i) + rx;
+                    self.bus.borrow_mut().wb(offset, self.v[rx]);
                 }
             }
             AddressingMode::VxMem(x) => {
-                for i in 0..=x {
-                    let offset = usize::from(self.i) + i;
-                    self.v[i] = self.bus.borrow_mut().rb(offset);
+                for rx in 0..=x {
+                    let offset = usize::from(self.i) + rx;
+                    self.v[rx] = self.bus.borrow_mut().rb(offset);
                 }
             }
-            _ => (),
+            _ => unreachable!(),
         }
     }
 
@@ -242,13 +213,17 @@ impl super::CPU {
 
                 for bit in 0..8 {
                     if (sprite_data & (0x80 >> bit)) > 0 {
-                        if self.bus.borrow_mut().wb_vram(x + bit, y + row, 1) {
+                        if self
+                            .bus
+                            .borrow_mut()
+                            .wb_vram((x + bit) % 64, (y + row) % 32, 1)
+                        {
                             self.v[0xF] = 1;
                         }
                     }
                 }
             }
-        }
+        } else {unreachable!()}
     }
 
     /// ADD: add the content of a register with a value
@@ -258,60 +233,68 @@ impl super::CPU {
                 self.v[x] = self.v[x].wrapping_add(kk);
             }
             AddressingMode::VxVy(x, y) => {
-                let (result, overflow) = self.v[x].overflowing_add(self.v[y]);
+                let (result, did_overflow) = self.v[x].overflowing_add(self.v[y]);
 
                 self.v[x] = result;
-                self.v[0xf] = u8::from(overflow);
+                self.v[0xf] = u8::from(did_overflow);
             }
             AddressingMode::IVx(x) => {
-                let result = self.i.wrapping_add(u16::from(self.v[x]));
-                if result > 0xFFF || result < self.i {
-                    self.v[0xf] = 1;
-                }
-                self.i = result
+                self.i = self.i.wrapping_add(u16::from(self.v[x]));
             }
-            _ => (),
+            _ => unreachable!(),
         }
     }
     /// SUB: subract the content of a register with a value
     pub fn exec_sub(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, y) = addressing_mode {
-            let (result, overflow) = self.v[x].overflowing_sub(self.v[y]);
+            let (result, did_overflow) = self.v[x].overflowing_sub(self.v[y]);
 
             self.v[x] = result;
-            self.v[0xF] = u8::from(overflow);
+            self.v[0xF] = u8::from(did_overflow);
+        } else {
+            unreachable!()
         }
     }
     /// OR: bitwise-or the content of a register with a value
     pub fn exec_or(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, y) = addressing_mode {
             self.v[x] = self.v[x] | self.v[y];
+        } else {
+            unreachable!()
         }
     }
     /// AND: bitwise-and the content of a register with a value
     pub fn exec_and(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, y) = addressing_mode {
             self.v[x] = self.v[x] & self.v[y];
+        } else {
+            unreachable!()
         }
     }
     /// XOR: bitwise-xor the content of a register with a value
     pub fn exec_xor(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, y) = addressing_mode {
             self.v[x] = self.v[x] ^ self.v[y];
+        } else {
+            unreachable!()
         }
     }
     /// SHL: shift left the bits of a register
     pub fn exec_shl(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, _) = addressing_mode {
             self.v[0xf] = self.v[x] & 0x80;
-            self.v[x] = self.v[x].checked_shl(1).unwrap_or(0);
+            self.v[x] <<= 1;
+        } else {
+            unreachable!()
         }
     }
     /// SHR: shift right the bits of a register
     pub fn exec_shr(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxVy(x, _) = addressing_mode {
             self.v[0xf] = self.v[x] & 0x01;
-            self.v[x] = self.v[x].checked_shr(1).unwrap_or(0);
+            self.v[x] >>= 1;
+        } else {
+            unreachable!()
         }
     }
 
@@ -345,12 +328,16 @@ impl super::CPU {
         if let AddressingMode::Addr(addr) = addressing_mode {
             self.push_stack(self.pc);
             self.pc = addr;
+        } else {
+            unreachable!()
         }
     }
     /// RET: Return from a subroutine
     pub fn exec_ret(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::Implicit = addressing_mode {
             self.pc = self.pop_stack();
+        } else {
+            unreachable!()
         }
     }
 
@@ -358,6 +345,28 @@ impl super::CPU {
     pub fn exec_rnd(&mut self, addressing_mode: AddressingMode) {
         if let AddressingMode::VxImediate(x, nn) = addressing_mode {
             self.v[x] = rand::random::<u8>() & nn;
+        } else {
+            unreachable!()
         }
+    }
+
+    // SKNP: Skip next instruction if key with the value of Vx is not pressed.
+    pub fn exec_sknp(&mut self, addressing_mode: AddressingMode) {
+        if let AddressingMode::Vx(x) = addressing_mode {
+            if !((self.keypad & 1 << u16::from(self.v[x])) == 1 << u16::from(self.v[x])) {
+                self.pc += 2;
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    // SKP Skip next instruction if key with the value of Vx is pressed.
+    pub fn exec_skp(&mut self, addressing_mode: AddressingMode) {
+        if let AddressingMode::Vx(x) = addressing_mode {
+            if (self.keypad & 1 << u16::from(self.v[x])) == 1 << u16::from(self.v[x]) {
+                self.pc += 2;
+            }
+        } else {unreachable!()}
     }
 }

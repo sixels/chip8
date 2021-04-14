@@ -7,10 +7,11 @@ mod instruction;
 
 use instruction::{Instruction, Opcode};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Status {
     Running,
     Halt,
+    WaitingKeypress(usize),
 }
 
 pub struct CPU {
@@ -32,6 +33,7 @@ pub struct CPU {
 
     // Memory Bus
     pub bus: RefCell<MMU>,
+    pub keypad: u16,
 
     // cpu status
     pub status: Status,
@@ -57,6 +59,8 @@ impl CPU {
             stack: [0; 16],
 
             bus: RefCell::new(bus),
+            keypad: 0,
+
             status: Status::Running,
         }
     }
@@ -67,15 +71,16 @@ impl CPU {
 
     // perform a cpu cycle
     pub fn cycle(&mut self) {
-        let instruction = self.fetch();
-        self.execute(instruction);
-        // TODO: decrement the timers
+        if self.status == Status::Running {
+            let instruction = self.fetch();
+            self.execute(instruction);
+        }
     }
 
     // fetch and decode an opcode, returning the respective instruction
     pub fn fetch(&mut self) -> Instruction {
         let opcode = self.bus.borrow_mut().rw(self.pc as usize);
-        println!("{:04X}", opcode);
+        // println!("{:04X}", opcode);
         let instruction: Instruction = opcode.into();
 
         self.pc += 2;
@@ -102,7 +107,7 @@ impl CPU {
     // execute a given instruction
     pub fn execute(&mut self, instruction: Instruction) {
         let Instruction(opcode, addressing_mode) = instruction;
-        println!("Running {:06x?}", instruction);
+        // println!("Running {:06x?}", instruction);
 
         match opcode {
             Opcode::CLS => self.exec_cls(),
@@ -127,6 +132,9 @@ impl CPU {
             Opcode::RET => self.exec_ret(addressing_mode),
 
             Opcode::RND => self.exec_rnd(addressing_mode),
+
+            Opcode::SKNP => self.exec_sknp(addressing_mode),
+            Opcode::SKP => self.exec_skp(addressing_mode),
 
             _ => panic!("Instruction not implemented: {:x?}", instruction),
         }
